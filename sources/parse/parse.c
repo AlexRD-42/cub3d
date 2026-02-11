@@ -6,7 +6,7 @@
 /*   By: adeimlin <adeimlin@student.42porto.com>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/06 11:19:47 by adeimlin          #+#    #+#             */
-/*   Updated: 2026/02/10 16:27:50 by adeimlin         ###   ########.fr       */
+/*   Updated: 2026/02/11 11:32:00 by adeimlin         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,6 +17,8 @@
 #include <unistd.h>
 #include "cub_structs.h"
 #include "cub_utils.h"
+#include "cmlx.h"
+#include "mlx.h"
 
 // Save max wall width and height
 // Validate wall exterior
@@ -24,12 +26,13 @@
 // Map content has to be last
 
 // Reads a string until it finds a null terminator, space or length > 255
-// Copies what is read into a buffer and returns the fd of what was read
-// Returns: >=0) valid fd, -1) fd error, -2) path too long (P)
+// Returns: >=0) valid fd, -1) fd error, -2) path too long
+// TODO: Create a wrapper function for xpm_to_image that removes struct malloc
 static
-int	stt_read_path(const char **filename_ptr)
+t_img	*stt_read_xpm(t_xvar *mlx, const char **filename_ptr)
 {
-	int			fd;
+	int			tmp;
+	t_img		*img;
 	const char	*filename = *filename_ptr;
 	char		path[256];
 	size_t		length;
@@ -40,21 +43,23 @@ int	stt_read_path(const char **filename_ptr)
 	while (filename[length] != 0 && !ft_isspace(filename[length]))
 	{
 		if (length >= 255)
-			return (ft_error("Error\n", "", -2));	// Path too long
+			return (NULL);	// Path too long, TODO: print
 		path[length] = filename[length];
 		length++;
 	}
 	path[length] = 0;
 	*filename_ptr = filename;
-	fd = open(path, O_RDONLY);
-	return (fd);
+	img = mlx_xpm_file_to_image(mlx, path, &tmp, &tmp);
+	if (img == NULL)
+		return (NULL);	// Error opening file, TODO: print
+	return (img);
 }
 
-// Returns: 0) Ok, -1) Invalid value (P), -2) Two Player Positions (P)
+// Returns: >0) Ok, -1) Invalid value (P), -2) Two Player Positions (P)
 static
-int	stt_parse_line(const char **line_ptr, t_map *map)
+ssize_t	stt_parse_line(const char *line, t_map *map)
 {
-	const char	*line = *line_ptr;
+	const char	*oline = line;
 	size_t		cols;
 
 	cols = 0;
@@ -75,20 +80,19 @@ int	stt_parse_line(const char **line_ptr, t_map *map)
 	}
 	if (cols > map->cols)
 		map->cols = cols;
-	*line_ptr = line + (*line == '\n');
-	return (0);
+	return ((line - oline) + (*line == '\n'));
 }
 
 int	cub_validate_map(const char *str, t_map *map)
 {
-	int			rvalue;
+	ssize_t		offset;
 	const char	*ostr = str;
 
 	while (*str != 0)
 	{
-		rvalue = stt_parse_line(&str, map);
-		if (rvalue != 0)
-			return (rvalue);
+		offset = stt_parse_line(str, map);
+		if (offset <= 0)
+			return (offset);
 		map->rows++;
 	}
 	return (0);

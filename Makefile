@@ -1,7 +1,7 @@
 # Configuration ------------------------------- #
 NAME = main
-VPATH = sources sources/utils
-SRCS = main.c char_ascii.c
+VPATH = sources sources/utils sources/parse
+SRCS = read_rgb.c
 LDLIBS = 
 ASM = $(OBJS:.o=.s)
 
